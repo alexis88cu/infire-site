@@ -6,6 +6,7 @@
 
 import { db, Lead } from '../db'
 import { generateOutreachCopy, generateDemoContent } from './analyzer'
+import { log } from '../logger'
 
 const DEMO_BASE_URL = 'https://atlaswebagency.net/demo'
 const OWNER_PHONE = process.env.OWNER_WHATSAPP_PHONE!  // e.g. 17864353507
@@ -139,6 +140,7 @@ export async function sendInitialOutreach(lead: Lead): Promise<boolean> {
       follow_up_at: followUpAt.toISOString(),
     }).eq('id', lead.id)
 
+    await log('outreach', 'Initial outreach sent', `Demo sent to ${lead.business_name} (${lead.niche}, ${lead.city}) → ${demoUrl}`, { lead_id: lead.id, level: 'success' })
     console.log(`[Outreach] Sent to ${lead.business_name} | demo: ${demoUrl}`)
   }
 
@@ -188,6 +190,7 @@ async function sendFollowUp(lead: Lead, attempt: 1 | 2): Promise<void> {
     }).eq('id', lead.id)
   }
 
+  await log('outreach', `Follow-up #${attempt} sent`, `${lead.business_name} — ${attempt === 2 ? 'final follow-up, marking as lost if no reply' : 'day-3 follow-up'}`, { lead_id: lead.id, level: 'info' })
   console.log(`[Outreach] Follow-up #${attempt} sent to ${lead.business_name}`)
 }
 

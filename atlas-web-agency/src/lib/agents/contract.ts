@@ -8,6 +8,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { db, Lead } from '../db'
 import { notifyOwner } from './outreach'
+import { log } from '../logger'
 
 const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
@@ -86,6 +87,7 @@ Format in clean markdown. Professional but readable.`
       `👉 Approve here: ${dashboardUrl}`
     )
 
+    await log('contract', 'Contract ready for approval', `${lead.business_name} — ${selectedPlan} plan ($${config.setup} setup + $${config.monthly}/mo)`, { lead_id: lead.id, level: 'warning' })
     console.log(`[Contract] Draft created for ${lead.business_name} (${selectedPlan})`)
   }
 
@@ -142,6 +144,7 @@ export async function approveAndSendContract(contractId: string): Promise<boolea
     )
   }
 
+  await log('contract', 'Contract sent to client', `${lead.business_name} — ${contract.plan} plan`, { lead_id: lead.id, level: 'success' })
   console.log(`[Contract] Sent to ${lead.business_name}`)
   return true
 }

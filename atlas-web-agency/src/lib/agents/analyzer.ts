@@ -9,6 +9,7 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import { db, Lead } from '../db'
+import { log } from '../logger'
 
 const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
@@ -236,8 +237,11 @@ export async function analyzeNewLeads(): Promise<number> {
       owner_name: analysis.ownerName,
     }).eq('id', lead.id)
     processed++
+    const emoji = analysis.leadScore >= 8 ? '🔥' : analysis.leadScore >= 6 ? '⭐' : '👎'
+    await log('analyzer', 'Lead scored', `${emoji} ${lead.business_name} — score ${analysis.leadScore}/10. ${analysis.notes}`, { lead_id: lead.id, level: analysis.leadScore >= 7 ? 'success' : 'info' })
   }
 
+  await log('analyzer', 'Scoring complete', `${processed} leads analyzed`)
   console.log(`[Analyzer] Scored ${processed} new leads`)
   return processed
 }

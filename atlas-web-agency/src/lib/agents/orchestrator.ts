@@ -10,6 +10,7 @@ import { runOutreachAgent } from './outreach'
 import { generateContract } from './contract'
 import { db } from '../db'
 import { Lead } from '../db'
+import { log } from '../logger'
 
 export interface PipelineResult {
   newLeads: number
@@ -22,6 +23,7 @@ export interface PipelineResult {
 
 export async function runDailyPipeline(): Promise<PipelineResult> {
   console.log('[Orchestrator] Starting daily pipeline...')
+  await log('orchestrator', 'Daily pipeline started', 'Running all agents: scout → analyzer → outreach → contracts')
   const start = Date.now()
 
   // Step 1: Scout — find new leads
@@ -55,6 +57,7 @@ export async function runDailyPipeline(): Promise<PipelineResult> {
   }
 
   const elapsed = ((Date.now() - start) / 1000).toFixed(1)
+  await log('orchestrator', 'Pipeline complete', `${elapsed}s — leads: ${newLeads} | scored: ${scored} | outreach: ${outreachSent} | follow-ups: ${followUpsSent} | contracts: ${contractsGenerated}`, { level: 'success' })
   console.log(`[Orchestrator] Done in ${elapsed}s — leads: ${newLeads}, scored: ${scored}, outreach: ${outreachSent}, followups: ${followUpsSent}, contracts: ${contractsGenerated}`)
 
   return {

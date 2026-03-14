@@ -5,6 +5,7 @@
  */
 
 import { db } from '../db'
+import { log } from '../logger'
 
 const GOOGLE_PLACES_KEY = process.env.GOOGLE_PLACES_API_KEY!
 
@@ -77,6 +78,8 @@ function cityFromAddress(address: string): string {
 export async function runScoutAgent(maxLeads = 20): Promise<number> {
   let found = 0
 
+  await log('scout', 'Pipeline started', `Searching for up to ${maxLeads} leads across Florida`)
+
   for (const niche of NICHES) {
     if (found >= maxLeads) break
 
@@ -119,10 +122,12 @@ export async function runScoutAgent(maxLeads = 20): Promise<number> {
       if (!error) {
         found++
         console.log(`[Scout] Found: ${place.name} (${niche}, ${city}) score=${websiteScore}`)
+        await log('scout', 'Lead found', `${place.name} — ${niche} in ${city} (website score: ${websiteScore}/10)`, { level: 'success' })
       }
     }
   }
 
+  await log('scout', 'Search complete', `${found} new leads added to pipeline`, { level: found > 0 ? 'success' : 'info' })
   console.log(`[Scout] Done — ${found} new leads added`)
   return found
 }

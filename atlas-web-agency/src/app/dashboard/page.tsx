@@ -46,6 +46,15 @@ interface Client {
   website_url: string | null
 }
 
+interface AgentLog {
+  id: string
+  agent: string
+  action: string
+  details: string | null
+  level: string
+  created_at: string
+}
+
 const STATUS_COLORS: Record<string, string> = {
   new: 'bg-slate-700 text-slate-200',
   demo_sent: 'bg-blue-900 text-blue-200',
@@ -63,7 +72,8 @@ export default function Dashboard() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [contracts, setContracts] = useState<PendingContract[]>([])
   const [clients, setClients] = useState<Client[]>([])
-  const [activeTab, setActiveTab] = useState<'pipeline' | 'contracts' | 'clients'>('contracts')
+  const [logs, setLogs] = useState<AgentLog[]>([])
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'contracts' | 'clients' | 'activity'>('contracts')
   const [approving, setApproving] = useState<string | null>(null)
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [running, setRunning] = useState(false)
@@ -76,6 +86,7 @@ export default function Dashboard() {
     setLeads(data.leads)
     setContracts(data.pendingContracts)
     setClients(data.clients)
+    setLogs(data.logs ?? [])
   }
 
   useEffect(() => { load() }, [])
@@ -175,6 +186,7 @@ export default function Dashboard() {
             { id: 'contracts', label: `Contracts to Approve${contracts.length ? ` (${contracts.length})` : ''}` },
             { id: 'pipeline', label: 'Lead Pipeline' },
             { id: 'clients', label: `Clients (${clients.length})` },
+            { id: 'activity', label: `Activity Log${logs.length ? ` (${logs.length})` : ''}` },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -333,6 +345,50 @@ export default function Dashboard() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* ─── ACTIVITY TAB ──────────────────────────────────────────────────── */}
+        {activeTab === 'activity' && (
+          <div>
+            {logs.length === 0 ? (
+              <div className="text-center py-20 text-slate-500">
+                <div className="text-4xl mb-3">🤖</div>
+                <p>No agent activity yet.</p>
+                <p className="text-sm mt-1">Run the pipeline to see what the agents are doing.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {logs.map((entry) => {
+                  const levelStyle =
+                    entry.level === 'success' ? 'border-green-700/40 bg-green-950/30' :
+                    entry.level === 'warning' ? 'border-orange-700/40 bg-orange-950/30' :
+                    entry.level === 'error'   ? 'border-red-700/40 bg-red-950/30' :
+                    'border-white/10 bg-white/5'
+                  const agentColor: Record<string, string> = {
+                    scout:        'bg-blue-900 text-blue-300',
+                    analyzer:     'bg-purple-900 text-purple-300',
+                    outreach:     'bg-yellow-900 text-yellow-300',
+                    contract:     'bg-orange-900 text-orange-300',
+                    orchestrator: 'bg-slate-700 text-slate-300',
+                  }
+                  return (
+                    <div key={entry.id} className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${levelStyle}`}>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded shrink-0 mt-0.5 ${agentColor[entry.agent] ?? 'bg-slate-700 text-slate-300'}`}>
+                        {entry.agent}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-white">{entry.action}</div>
+                        {entry.details && <div className="text-xs text-slate-400 mt-0.5 truncate">{entry.details}</div>}
+                      </div>
+                      <div className="text-xs text-slate-500 shrink-0">
+                        {new Date(entry.created_at).toLocaleString()}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
 

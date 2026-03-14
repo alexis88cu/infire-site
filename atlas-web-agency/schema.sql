@@ -92,6 +92,22 @@ create table demos (
 );
 
 -- ─────────────────────────────────────────
+-- AGENT LOGS (activity feed)
+-- ─────────────────────────────────────────
+create table agent_logs (
+  id          uuid primary key default gen_random_uuid(),
+  agent       text not null,               -- scout | analyzer | outreach | contract | orchestrator
+  action      text not null,               -- what happened (short label)
+  details     text,                        -- longer description
+  lead_id     uuid references leads(id) on delete set null,
+  level       text default 'info',         -- info | success | warning | error
+  created_at  timestamptz default now()
+);
+
+create index agent_logs_created_idx on agent_logs(created_at desc);
+create index agent_logs_agent_idx on agent_logs(agent);
+
+-- ─────────────────────────────────────────
 -- INDEXES
 -- ─────────────────────────────────────────
 create index leads_status_idx on leads(status);
