@@ -26,11 +26,19 @@ export async function GET() {
     .order('created_at', { ascending: false })
     .limit(50)
 
+  if (leadsRes.error) console.error('[dashboard] leads error:', leadsRes.error)
+  if (kpisRes.error) console.error('[dashboard] kpis error:', kpisRes.error)
+
   return NextResponse.json({
     kpis: kpisRes.data,
     leads: leadsRes.data ?? [],
     pendingContracts: contractsRes.data ?? [],
     clients: clientsRes.data ?? [],
     logs: logsRes.data ?? [],
+    _debug: {
+      leadsCount: leadsRes.data?.length ?? 0,
+      leadsError: leadsRes.error?.message ?? null,
+      kpisError: kpisRes.error?.message ?? null,
+    },
   })
 }
