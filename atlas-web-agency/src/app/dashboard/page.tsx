@@ -83,9 +83,9 @@ export default function Dashboard() {
     const res = await fetch('/api/dashboard')
     const data = await res.json()
     setKpis(data.kpis)
-    setLeads(data.leads)
-    setContracts(data.pendingContracts)
-    setClients(data.clients)
+    setLeads(data.leads ?? [])
+    setContracts(data.pendingContracts ?? [])
+    setClients(data.clients ?? [])
     setLogs(data.logs ?? [])
   }
 
