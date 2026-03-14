@@ -78,6 +78,7 @@ export default function Dashboard() {
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [running, setRunning] = useState(false)
   const [pipelineResult, setPipelineResult] = useState<string | null>(null)
+  const [debugInfo, setDebugInfo] = useState<string | null>(null)
 
   async function load() {
     const res = await fetch('/api/dashboard')
@@ -87,6 +88,7 @@ export default function Dashboard() {
     setContracts(data.pendingContracts ?? [])
     setClients(data.clients ?? [])
     setLogs(data.logs ?? [])
+    if (data._debug) setDebugInfo(JSON.stringify(data._debug))
   }
 
   useEffect(() => { load() }, [])
@@ -153,6 +155,13 @@ export default function Dashboard() {
       </div>
 
       <div className="px-8 py-8 max-w-7xl mx-auto">
+        {/* Debug info */}
+        {debugInfo && (
+          <div className="mb-4 px-4 py-2 rounded-lg text-xs font-mono bg-slate-900 border border-slate-700 text-slate-300">
+            🔍 Debug: {debugInfo}
+          </div>
+        )}
+
         {/* Pipeline result */}
         {pipelineResult && (
           <div className={`mb-6 px-4 py-3 rounded-xl text-sm font-mono border ${pipelineResult.startsWith('✅') ? 'bg-green-950 border-green-700 text-green-300' : 'bg-red-950 border-red-700 text-red-300'}`}>
