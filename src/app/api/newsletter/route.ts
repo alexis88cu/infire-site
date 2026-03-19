@@ -7,7 +7,7 @@ import articles from '@/lib/blog.json';
 
 export async function POST(req: NextRequest) {
   try {
-    const { slug, secret } = await req.json();
+    const { slug, secret, testEmail } = await req.json();
 
     // Simple secret key check
     const NEWSLETTER_SECRET = process.env.NEWSLETTER_SECRET;
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     const RESEND_AUDIENCE_ID = process.env.RESEND_AUDIENCE_ID;
     const FROM_EMAIL = process.env.FROM_EMAIL || 'newsletter@infireinc.net';
 
-    if (!RESEND_API_KEY || !RESEND_AUDIENCE_ID) {
+    if (!RESEND_API_KEY) {
       return NextResponse.json({ message: 'Resend not configured.' }, { status: 500 });
     }
 
@@ -100,7 +100,42 @@ export async function POST(req: NextRequest) {
 </body>
 </html>`;
 
-    // Send broadcast via Resend
+    // TEST MODE: send directly to a single email instead of broadcasting
+    if (testEmail) {
+      const testRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: `Infire Inc. <${FROM_EMAIL}>`,
+          to: [testEmail],
+          subject: `[TEST] ${article.title} | Infire Weekly`,
+          html: newsletterHtml.replace('{{email}}', testEmail),
+        }),
+      });
+
+      if (!testRes.ok) {
+        const err = await testRes.json();
+        return NextResponse.json({ message: 'Resend test email error', error: err }, { status: 500 });
+      }
+
+      const testData = await testRes.json();
+      return NextResponse.json({
+        success: true,
+        test: true,
+        email_id: testData.id,
+        article: article.slug,
+        sent_to: testEmail,
+      });
+    }
+
+    // BROADCAST: send to entire audience
+    if (!RESEND_AUDIENCE_ID) {
+      return NextResponse.json({ message: 'Resend audience not configured.' }, { status: 500 });
+    }
+
     const res = await fetch('https://api.resend.com/broadcasts', {
       method: 'POST',
       headers: {
