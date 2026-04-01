@@ -7,9 +7,45 @@ export const maxDuration = 60;
 
 // GET /api/cron/weekly
 // Called by Vercel Cron every Friday at 9am ET (14:00 UTC)
-// 1. Generates a new blog post via Claude API
-// 2. Commits it to blog.json on GitHub (triggers Vercel redeploy)
-// 3. Sends newsletter to all Resend subscribers
+// 1. Scrapes industry blog sources for recent topics
+// 2. Generates a new post via Claude API (rewritten in Infire voice)
+// 3. Commits it to blog.json on GitHub (triggers Vercel redeploy)
+// 4. Sends newsletter to all Resend subscribers
+
+const BLOG_SOURCES = [
+  'https://pbfpe.com/blog',
+  'https://blog.qrfs.com/',
+  'https://www.nfpa.org/news-blogs-and-articles',
+  'https://www.meyerfire.com/blog',
+];
+
+// Fetch a blog page and extract article titles from heading tags
+async function scrapeTopics(url: string): Promise<string[]> {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; InfireBot/1.0)' },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return [];
+    const html = await res.text();
+
+    const titles: string[] = [];
+    const patterns = [
+      /<h[123][^>]*>([^<]{15,120})<\/h[123]>/gi,
+      /<a[^>]+class="[^"]*(?:title|post-title|entry-title)[^"]*"[^>]*>([^<]{15,120})<\/a>/gi,
+    ];
+    for (const pattern of patterns) {
+      let match;
+      while ((match = pattern.exec(html)) !== null) {
+        const text = match[1].replace(/&amp;/g, '&').replace(/&#\d+;/g, '').trim();
+        if (text.length > 15) titles.push(text);
+      }
+    }
+    return [...new Set(titles)].slice(0, 8);
+  } catch {
+    return [];
+  }
+}
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
@@ -32,27 +68,30 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // ── 1. Generate blog post via Claude ────────────────────────────────────
+    // ── 1. Scrape industry sources for recent topics ─────────────────────────
+    const scraped = await Promise.all(BLOG_SOURCES.map(scrapeTopics));
+    const industryTopics = scraped.flat().filter(Boolean);
+
     const existingTitles = (currentArticles as any[]).map((a: any) => a.title).join(', ');
     const today = new Date().toISOString();
 
-    const prompt = `You are a senior technical writer for Infire Inc., a fire protection engineering firm in Florida. Write a new weekly blog post for fire protection engineers, designers, and contractors.
+    const topicsBlock = industryTopics.length > 0
+      ? `Recent topics circulating in the fire protection industry this week (use these as inspiration only — pick the most relevant one and write about it entirely in your own words):\n${industryTopics.map(t => `- ${t}`).join('\n')}`
+      : `Choose a relevant topic from fire protection engineering practice in Florida (sprinklers, standpipes, fire pumps, suppression systems, inspection, code compliance).`;
 
-Existing articles (DO NOT repeat these topics): ${existingTitles}
+    // ── 2. Generate blog post via Claude ────────────────────────────────────
+    const prompt = `You are a senior fire protection engineer at Infire Inc., a fire protection design firm in Florida. Write a new weekly blog post for our website, targeting fire protection engineers, designers, and contractors.
 
-Choose ONE topic from this list:
-- Underground fire mains: NFPA 24 design and installation
-- Special hazard suppression: clean agents, FM-200, CO2 for data centers
-- NFPA 72 fire alarm integration with sprinkler systems
-- Wet chemical kitchen hood suppression (NFPA 17A)
-- Pre-action sprinkler systems: design and applications
-- Antifreeze sprinkler systems: current code requirements
-- Seismic bracing for fire protection pipe (NFPA 13 Chapter 9)
-- Pressure reducing valves in high-rise standpipe systems
-- Listed vs approved materials in NFPA standards
-- Fire department connections: NFPA 13 placement and sizing
+${topicsBlock}
 
-Return ONLY a valid JSON object with this exact structure (no markdown, no explanation):
+Rules:
+- Write entirely in your own professional voice as a licensed fire protection engineer
+- Never reference, name, or link to any external publication, blog, or source
+- Do not cite specific numbered sections of any code (e.g. do NOT write "Section 8.2.3" or "Chapter 14.4.2") — reference only the NFPA standard by name (e.g. "NFPA 13", "NFPA 25", "NFPA 20")
+- Avoid topics already covered: ${existingTitles}
+- Be technically precise and practical — this is read by working professionals
+
+Return ONLY a valid JSON object, no markdown, no explanation:
 {
   "_id": "short-kebab-id",
   "slug": "descriptive-seo-slug-with-keywords",
@@ -68,8 +107,8 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
   "seoDescription": "SEO meta description under 155 chars.",
   "publishedOnSite": true,
   "featured": false,
-  "hook": "Two to three sentence hook paragraph that pulls the reader in.",
-  "body": "Full article 800-1000 words. Use **Section Title** for headers. Be technically precise, practical, and written for working fire protection professionals.",
+  "hook": "Two to three sentence hook that pulls the reader in.",
+  "body": "Full article 800-1000 words. Use **Section Title** for headers. Technically precise and practical.",
   "takeaway": "One sentence key takeaway.",
   "imageAlt": "Description of ideal photo for this article.",
   "imageLayout": "hero-full",
@@ -99,7 +138,7 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
     const rawJson = claudeData.content[0].text.trim();
     const newArticle: Article = JSON.parse(rawJson);
 
-    // ── 2. Commit new article to GitHub ─────────────────────────────────────
+    // ── 3. Commit new article to GitHub ─────────────────────────────────────
     const FILE_PATH = 'src/lib/blog.json';
 
     const fileRes = await fetch(
@@ -144,7 +183,7 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
       return NextResponse.json({ message: 'GitHub commit error', error: err }, { status: 500 });
     }
 
-    // ── 3. Send newsletter to all subscribers ────────────────────────────────
+    // ── 4. Send newsletter to all subscribers ────────────────────────────────
     const html = buildNewsletterHtml(newArticle);
 
     const broadcastRes = await fetch('https://api.resend.com/broadcasts', {
@@ -178,6 +217,7 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
       success: true,
       article: newArticle.slug,
       title: newArticle.title,
+      topics_scraped: industryTopics.length,
       broadcast_id: broadcast.id,
       newsletter_sent: sendRes.ok,
     });
