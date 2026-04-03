@@ -176,11 +176,11 @@ export default function SubscribePage() {
 
         {/* Price block */}
         <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', background: 'linear-gradient(135deg,rgba(243,121,61,0.1),rgba(243,121,61,0.04))', border: '1px solid rgba(243,121,61,0.35)', borderRadius: '16px', padding: '1.4rem 2.5rem', marginBottom: '1.5rem' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--orange)', marginBottom: '0.4rem' }}>Annual Access</div>
+          <div style={{ fontSize: '0.85rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#e6edf3', marginBottom: '0.75rem' }}>Weekly Blog Post by Email</div>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '3px' }}>
             <span style={{ fontSize: '1.2rem', fontWeight: 800, marginTop: '7px', color: '#e6edf3' }}>$</span>
             <span style={{ fontSize: '3.8rem', fontWeight: 900, lineHeight: 1, color: '#fff' }}>5</span>
-            <span style={{ fontSize: '0.95rem', color: '#adb5bd', marginTop: '13px' }}>/year</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--orange)', marginTop: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>BY YEAR</span>
           </div>
           <div style={{ marginTop: '0.4rem', background: 'rgba(243,121,61,0.15)', borderRadius: '8px', padding: '5px 14px', color: '#f3793d', fontWeight: 800, fontSize: '0.9rem' }}>
             = $0.01 per day
